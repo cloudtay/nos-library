@@ -1,0 +1,11 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+
+use Cloudtay\Nos\Kernel;
+
+$rootDir = \dirname(__DIR__, 1);
+
+include $rootDir . '/vendor/autoload.php';
+Kernel::initialize($rootDir . '/app');
+Kernel::run();
+\Co\wait();

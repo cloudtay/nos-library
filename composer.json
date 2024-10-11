@@ -1,0 +1,26 @@
+{
+  "name": "cloudtay/nos",
+  "license": "MIT",
+  "description": "A demo project for ripple",
+  "version": "dev-main",
+  "autoload": {
+    "psr-4": {
+      "Cloudtay\\Nos\\": "src/"
+    }
+  },
+  "bin": [
+    "bin/nos"
+  ],
+  "authors": [
+    {
+      "name": "cclilshy",
+      "email": "jingnigg@gmail.com"
+    }
+  ],
+  "require": {
+    "cclilshy/p-ripple-core": "dev-main"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.64"
+  }
+}
