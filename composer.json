@@ -1,16 +1,14 @@
 {
-  "name": "cloudtay/nos",
+  "name": "cloudtay/nos-library",
   "license": "MIT",
-  "description": "A demo project for ripple",
-  "version": "dev-main",
+  "description": "nos-library for ripple",
+  "version": "v0.1",
   "autoload": {
     "psr-4": {
       "Cloudtay\\Nos\\": "src/"
     }
   },
-  "bin": [
-    "bin/nos"
-  ],
+  "bin": ["bin/nos"],
   "authors": [
     {
       "name": "cclilshy",
@@ -18,9 +16,11 @@
     }
   ],
   "require": {
-    "cclilshy/p-ripple-core": "dev-main"
+    "cloudtay/ripple": "*"
   },
   "require-dev": {
     "friendsofphp/php-cs-fixer": "^3.64"
-  }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }

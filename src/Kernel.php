@@ -2,70 +2,53 @@
 
 namespace Cloudtay\Nos;
 
-use Cloudtay\Nos\Http\Route\Route;
-use Co\IO;
-use Psc\Core\File\Exception\FileException;
+use DirectoryIterator;
 use Psc\Core\File\Monitor;
 use Psc\Core\Stream\Exception\ConnectionException;
 use Psc\Utils\Output;
 use Psc\Worker\Manager;
 
-use function array_map;
-use function file_exists;
-use function glob;
-use function in_array;
-use function pathinfo;
-use function scandir;
-
-use const GLOB_BRACE;
-use const PATHINFO_EXTENSION;
+use function str_starts_with;
 
 class Kernel
 {
-    /*** @var string */
-    public static string $routeClass = Route::class;
-
     /*** @var Manager */
-    public static Manager $manager;
+    protected static Manager $manager;
 
-    /*** @var string */
-    public static string $appPath;
+    /*** @var \Psc\Core\File\Monitor */
+    protected static Monitor $monitor;
 
     /***
-     * @param string $appPath
+     *
      * @return void
      */
-    public static function initialize(string $appPath): void
+    public static function initialize(): void
     {
-        static::$appPath = $appPath;
-        static::$manager = new Manager();
-        foreach (scandir($appPath) as $path) {
-            if (in_array($path, ['.', '..'])) {
+        Kernel::$monitor = new Monitor();
+        Kernel::$monitor->add(NOS_APP_PATH);
+        Kernel::$monitor->onTouch  = static fn () => Kernel::reload();
+        Kernel::$monitor->onModify = static fn () => Kernel::reload();
+        Kernel::$monitor->onRemove = static fn () => Kernel::reload();
+
+        Kernel::$manager = new Manager();
+
+        /*** @var DirectoryIterator $fileInfo */
+        foreach ((new DirectoryIterator(NOS_APP_PATH)) as $fileInfo) {
+            if (str_starts_with($fileInfo->getFilename(), '.')) {
                 continue;
             }
 
-            Kernel::import($path);
+            Package::import($fileInfo->getPathname(), true);
         }
     }
 
-    /*** @return void */
+    /**
+     * @return void
+     */
     public static function run(): void
     {
-        \Co\forked(static function () {
-            array_map(
-                static fn ($file) => require_once $file,
-                glob(static::$appPath . '/**/*.php', GLOB_BRACE)
-            );
-        });
-
-        $monitor = new Monitor();
-        $monitor->add(static::$appPath);
-        $monitor->onTouch  = static fn () => static::reload();
-        $monitor->onModify = static fn () => static::reload();
-        $monitor->onRemove = static fn () => static::reload();
-        $monitor->start();
-
-        static::$manager->run();
+        Kernel::$monitor->start();
+        Kernel::$manager->run();
     }
 
     /**
@@ -74,7 +57,7 @@ class Kernel
     public static function reload(): void
     {
         try {
-            static::$manager->reload();
+            Kernel::$manager->reload();
         } catch (ConnectionException $e) {
             Output::exception($e);
             exit(-1);
@@ -82,46 +65,34 @@ class Kernel
     }
 
     /**
-     * @var array
+     * @return \Psc\Core\File\Monitor
      */
-    private static array $modules = [];
-
-    /**
-     * @param string $module
-     * @return mixed
-     */
-    public static function import(string $module): mixed
+    public static function monitor(): Monitor
     {
-        if (isset(static::$modules[$module])) {
-            return static::$modules[$module];
-        }
-
-        if (file_exists($modulePath = static::getModulePath($module))) {
-            return static::$modules[$module] = require $modulePath;
-        } elseif (file_exists($module)) {
-            if (pathinfo($module, PATHINFO_EXTENSION) === 'php') {
-                return static::$modules[$module] = require $module;
-            } else {
-                try {
-                    return static::$modules[$module] = IO::File()->getContents($module);
-                } catch (FileException $e) {
-                    Output::warning("module {$module} load fail: {$e->getMessage()}");
-                    return false;
-                }
-            }
-        }
-
-
-        Output::warning("Module {$module} not found");
-        return false;
+        return Kernel::$monitor;
     }
 
     /**
-     * @param string $module
+     * @return \Psc\Worker\Manager
+     */
+    public static function manager(): Manager
+    {
+        return Kernel::$manager;
+    }
+
+    /**
+     * @param string|null $path
+     *
      * @return string
      */
-    public static function getModulePath(string $module): string
+    public static function appPath(string $path = null): string
     {
-        return static::$appPath . "/{$module}/{$module}.php";
+        if (!$path) {
+            return NOS_APP_PATH;
+        } elseif ($path[0] === '/') {
+            return NOS_APP_PATH . $path;
+        } else {
+            return NOS_APP_PATH . '/' . $path;
+        }
     }
 }
