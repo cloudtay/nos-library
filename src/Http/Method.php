@@ -2,7 +2,7 @@
 
 namespace Cloudtay\Nos\Http;
 
-enum Method
+enum Method: string
 {
     public const GET     = 'GET';
     public const POST    = 'POST';

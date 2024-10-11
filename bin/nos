@@ -2,10 +2,49 @@
 <?php declare(strict_types=1);
 
 use Cloudtay\Nos\Kernel;
+use Composer\Autoload\ClassLoader;
+use Psc\Utils\Output;
 
-$rootDir = \dirname(__DIR__, 1);
+function defineRootPath(): void
+{
+    $reflectionClass = new ReflectionClass(ClassLoader::class);
+    define('PROJECT_ROOT_PATH', dirname($reflectionClass->getFileName(), 3));
+}
 
-include $rootDir . '/vendor/autoload.php';
-Kernel::initialize($rootDir . '/app');
+if (class_exists(ClassLoader::class)) {
+    defineRootPath();
+} elseif (isset($GLOBALS['_composer_autoload_path'])) {
+    require $GLOBALS['_composer_autoload_path'];
+    defineRootPath();
+} elseif (file_exists($autoloadPath = \dirname(__DIR__) . '/vendor/autoload.php')) {
+    require $autoloadPath;
+    defineRootPath();
+} elseif (file_exists($autoloadPath = \dirname(__DIR__, 5) . '/vendor/autoload.php')) {
+    require $autoloadPath;
+    defineRootPath();
+}
+
+$pwd        = \getcwd();
+$nosAppPath = \getenv('NOS_APP_PATH');
+
+if (!$nosAppPath) {
+    $nosAppPath = $pwd;
+} elseif ($nosAppPath[0] !== '/') {
+    $nosAppPath = rtrim("{$pwd}/{$nosAppPath}", '/');
+}
+
+define('NOS_APP_PATH', $nosAppPath);
+
+if (NOS_APP_PATH === PROJECT_ROOT_PATH) {
+    Output::warning("It is unsafe to set NOS_APP_PATH to the project root directory.");
+    Output::writeln("Please set the project path through the environment variable NOS_APP_PATH,");
+    Output::writeln("example: \nNOS_APP_PATH=app vendor/bin/nos\n");
+    exit(0);
+} elseif (!file_exists(NOS_APP_PATH)) {
+    Output::error("The specified application path does not exist.");
+    exit(1);
+}
+
+Kernel::initialize();
 Kernel::run();
 \Co\wait();
